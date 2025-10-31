@@ -12,7 +12,7 @@ import Chall from "@/components/posts/Chall.astro"
 # Preliminary
 As far as I'm concerned `crypto` involves a bunch of maths. After painstakingly but successfully solving 3 out of the 8 challenges in this category in time (which is low as hell), I can imagine the amount of maths one has to know in order to solve many of these.
 
-There are several math majors who failed to solve some of these. I am being serious.
+I'll attempt to go through all 8 challenges, in detail.
 
 # The Challenges
 ## crypto/rot727
@@ -156,7 +156,9 @@ We get a pretty funny image with the flag handwritten in it.
 Looks like something about `XNOR`. There is a single Python script in the challenge archive.
 
 ```py title="script.py"
-import os flag = open("flag.txt", "rb").read() 
+import os 
+
+flag = open("flag.txt", "rb").read() 
 
 def xnor_gate(a, b): 
   if a == 0 and b == 0: 
@@ -208,7 +210,7 @@ So you're telling me two `XNOR`s just cancel each other. The challenge Python co
 xnor(xnor(xnor(x,k), k), k) = xnor(x,k)
 ```
 
-Therefore the encryption is just `enc = ~(flag ^ key)`, and from that, we get `key = (~enc) ^ flag`. Across the encrypted message, the challenge script repeats some 4-byte block across the message. We know the first four plaintext bytes, that's just `osu{` established by the rules of this contest.
+Therefore the encryption is just `enc = ~(flag ^ key)`, and from that, we get `key = (~enc) ^ flag`. Furthermore, the challenge script repeats some 4-byte block across the message. We know the first four plaintext bytes, that's just `osu{` established by the rules of this contest.
 
 Recover the flag by building a key stream `flag = (~enc) ^ key_stream`. The challenge is solved.
 
@@ -813,7 +815,7 @@ For each coeff. position we know its residue mod $n_i$. Then, we build the globa
 
 We get integers $C_2, C_1, C_0$ with
 $$
-F(x) := x^3 + C_2x^2 + C_1x + C_0 \equal 0\quad (\bmod\ N).
+F(x) := x^3 + C_2x^2 + C_1x + C_0 \equiv 0\quad (\bmod\ N).
 $$
 
 Any $x$ that solves the three original congruences will satisfy that.
@@ -851,7 +853,7 @@ f = 0
 const = 0
 shift = 2**(8*L)  # 256^L
 
-# cubic via CRT weighting (same thing as coefficient-wise CRT)
+# cubic via CRT weighting (same thing as coeff-wise CRT)
 for name, n, c in data:
   A = Integer(bytes_to_long(f"hi there {name}, ".encode())) * shift
   w = N // n
@@ -1215,4 +1217,4 @@ Now I think there's probably multiple way, way shorter solves and many way simpl
 
 At least, `:steamhappy:`.
 
-That's every `crypto` challenge solved and explained in detail. Well, in my ability that is.
+That's every `crypto` challenge solved and explained in detail. Well, in my ability that is. In my mother tongue `potato` has an inside meaning that roughly translates to `"that's tough as hell"`, so `cryp-otato`.

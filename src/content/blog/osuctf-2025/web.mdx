@@ -1,0 +1,39 @@
+---
+title: 'Web'
+description: "I participated a CTF for the first time. It was fun."
+date: 2025-05-30
+tags: ['ctf', 'writeup', 'web']
+image: './banner.png'
+authors: ['rin']
+---
+
+import Chall from "@/components/posts/Chall.astro"
+
+# Preliminary
+Now, this is the *best* category of this contest. Might be because there are multiple `web` challenge authors, might be because it's accessible to many people, might be because it's the nicest category to solve out there without feeling we lack knowledge since web knowledges are easily accessible, might be all of these.
+
+Initially I had a friend who wanted to join me on `web`, but they forgot to ask and I also didn't want to ask, so I ended up doing the `crypto` ones on Saturday then dip. Revisiting, yeah, I should turn my focus to this next year.
+
+When I say fun it doesn't mean the `web` challenges are free, though. There are two quite impossible challenges that somebody has a wonderful, wonderful write-up for, I'll link to theirs instead of writing my own.
+
+The `web` category has one more very interesting constraint that I'll put in the challenge description boxes. Basically, some of these challenges are hosted in a thing called ***instancers*** ([find the instancer source code here](https://github.com/es3n1n/tiny-instancer)), which when you request an instance of the challenge, it spawns one hosted instance of that challenge, each of that instance lasts for around 15 minutes.
+
+Good luck with that instancer if you feel hosting the thing yourself is a hassle.
+
+# The Challenges
+## web/admin-panel
+
+<Chall
+  title="Admin Panel"
+  authors={["strellic"]}
+  category="web"
+  solvedInTime="no"
+  files={["web_admin-panel.tar.gz"]}
+  flag="osu{bl3h_bleh_b13h_m4n_1_l0v3_aut0_r3vs_e4fb25f}"
+  instancer="no instancer"
+>
+  we found the secret osu! admin panel!!
+
+  can you find a way to log in and read the flag?
+</Chall>
+

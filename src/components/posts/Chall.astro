@@ -23,6 +23,7 @@ interface ChallengeProps {
   remote?: string
   flag?: string
   solvedInTime?: string
+  instancer?: string
 }
 
 const {
@@ -36,6 +37,7 @@ const {
   remote,
   flag,
   solvedInTime,
+  instancer
 } = Astro.props as ChallengeProps
 
 const categories = Array.isArray(category)
@@ -206,6 +208,19 @@ const categories = Array.isArray(category)
           </dt>
           <dd class="flex flex-1 flex-wrap gap-2">
             {<Badge text={solvedInTime} />}
+          </dd>
+        </div>
+      )
+    }
+    {
+      instancer !== undefined && (
+        <div class="flex flex-wrap items-center gap-x-4 py-2">
+          <dt class="text-muted-foreground flex flex-1 items-center gap-x-2 text-xs font-medium">
+            <Icon name="lucide:server" class="size-4" />
+            Instancer
+          </dt>
+          <dd class="flex flex-1 flex-wrap gap-2">
+            {<Badge text={instancer} />}
           </dd>
         </div>
       )
