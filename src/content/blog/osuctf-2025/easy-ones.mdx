@@ -1,0 +1,72 @@
+---
+title: 'The Easy Ones'
+description: "I participated a CTF for the first time. It was fun."
+date: 2025-05-30
+tags: ['ctf', 'writeup', 'osu!']
+image: './banner.png'
+authors: ['rin']
+---
+
+import Chall from "@/components/posts/Chall.astro"
+
+# Preliminary
+There are a couple of *tasks* that give you free points. They, technically, aren't *challenges*, and I cover them here. The solution for these are one-offs.
+
+# The Challenges
+## osu/welcome
+
+<Chall
+  title="Welcome"
+  authors={["osu!gang"]}
+  category="osu!"
+  solvedInTime="yes"
+  flag="osu{Rhythm+G4m3_4_L1f3!}"
+>
+  Welcome to osu!gaming CTF 2025 (Rhythm Game Edition). Please join our Discord for challenge updates and admin support.
+
+  Have fun!
+</Chall>
+
+This one only requires us to have a Discord account and join [the contest's Discord server](https://discord.com/invite/pJ5VpFKduN). Find the message that announces the start of this contest.
+
+Of course, there is point scaling: a point system that scales with how many people have solved the challenge; we'll have to be quick with this one. I woke up 4 hours after the announcement of the contest. Wonderful, yes?
+
+## osu/lobby
+
+<Chall
+  title="Lobby"
+  authors={["osu!gang"]}
+  category="osu!"
+  solvedInTime="yes"
+  flag="osu{Welc0me_And_G00d_Luck_Gett1ng_Th3_Secr3t_Prize<3}"
+>
+  Join the official CTF lobby osu!gaming CTF 2025 to claim the flag! You are more than welcomed to stay in the lobby for a bit longer and have fun with others.
+</Chall>
+
+Simple enough task in hindsight. One has to battle against their own social distance to send anything in a completely out-in-the-wild osu! multiplayer lobby. I sat there for 4 minutes waiting for someone to claim the flag, only after which I did. I'm sorry.
+
+I believe the lobby has closed, but the way we get the flag is just to execute `!flag` in chat, the `#multiplayer` channel. `sahuang` will send a private message to us.
+
+Initially I tried to manually type in the flag, but the way osu! IRC renders `0` and `o` kind of sucked for `1337code`, lol. Just get to the website, open chat and copy from there to avoid any misspells.
+
+## osu/survey
+
+<Chall
+  title="Survey"
+  authors={["osu!gang"]}
+  category="osu!"
+  solvedInTime="yes"
+  flag="osu{see_you_next_time}"
+>
+  free points yay
+
+  https://forms.gle/ocAr8RSgmUHZ2ArH9
+</Chall>
+
+Do the survey to improve the CTF experience next year, hopefully!
+
+Also the flag is at the end of the survey, before submitting. Remember to hit `Submit` after copying the flag, don't just close the page immediately, lol.
+
+I did that.
+
+Next up, since the very first category of this contest is `crypto`, we'll get into that.

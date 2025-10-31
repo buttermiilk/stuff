@@ -10,6 +10,7 @@ import expressiveCode from 'astro-expressive-code'
 import rehypeExternalLinks from 'rehype-external-links'
 import rehypeKatex from 'rehype-katex'
 import rehypePrettyCode from 'rehype-pretty-code'
+import rehypeDocument from 'rehype-document'
 import remarkEmoji from 'remark-emoji'
 import remarkMath from 'remark-math'
 
@@ -19,10 +20,10 @@ import { pluginLineNumbers } from '@expressive-code/plugin-line-numbers'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  site: 'https://astro-erudite.vercel.app',
+  site: 'https://sh1m3ji.dev',
   integrations: [
     expressiveCode({
-      themes: ['github-light', 'github-dark'],
+      themes: ['github-dark'],
       plugins: [pluginCollapsibleSections(), pluginLineNumbers()],
       useDarkModeMediaQuery: false,
       themeCssSelector: (theme) => `[data-theme="${theme.name.split('-')[1]}"]`,
@@ -61,7 +62,7 @@ export default defineConfig({
         lineNumbers: {
           foreground: 'var(--muted-foreground)',
         },
-        uiFontFamily: 'var(--font-sans)',
+        uiFontFamily: 'var(--font-mono)',
       },
     }),
     mdx(),
@@ -83,6 +84,12 @@ export default defineConfig({
     syntaxHighlight: false,
     rehypePlugins: [
       [
+        rehypeDocument,
+        {
+          css: 'https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css',
+        },
+      ],
+      [
         rehypeExternalLinks,
         {
           target: '_blank',
@@ -94,10 +101,7 @@ export default defineConfig({
       [
         rehypePrettyCode,
         {
-          theme: {
-            light: 'github-light',
-            dark: 'github-dark',
-          },
+          theme: 'vitesse-dark',
         },
       ],
     ],

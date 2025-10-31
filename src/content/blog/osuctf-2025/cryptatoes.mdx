@@ -1,0 +1,1218 @@
+---
+title: 'Cryp-otatoes'
+description: "I participated a CTF for the first time. It was fun."
+date: 2025-05-30
+tags: ['ctf', 'writeup', 'crypto']
+image: './banner.png'
+authors: ['rin']
+---
+
+import Chall from "@/components/posts/Chall.astro"
+
+# Preliminary
+As far as I'm concerned `crypto` involves a bunch of maths. After painstakingly but successfully solving 3 out of the 8 challenges in this category in time (which is low as hell), I can imagine the amount of maths one has to know in order to solve many of these.
+
+There are several math majors who failed to solve some of these. I am being serious.
+
+# The Challenges
+## crypto/rot727
+
+<Chall
+  title="ROT727"
+  authors={["wwm"]}
+  category="crypto"
+  solvedInTime="yes"
+  flag="osu{oh_wait_bigger_number_doesnt_mean_more_secure}"
+>
+  i rotated my flag 727 times! that's super secure right
+
+  `aeg{at_imuf_nussqd_zgynqd_paqezf_yqmz_yadq_eqogdq}`
+</Chall>
+
+That name reminds us of `ROT13`, a rotation cipher. We know every flag starts with `osu{`, so to make it quick, just put the string in [CyberChef](https://gchq.github.io/CyberChef). Set amount to `14` and the challenge is solved.
+
+## crypto/beyond-wood
+
+<Chall
+  title="Beyond Wood"
+  authors={["wwm"]}
+  category="crypto"
+  solvedInTime="no"
+  files={["crypto_beyond-wood.tar.gz"]}
+  flag="osu{h1_05u_d351gn_t34m}"
+>
+  spinning white floating glowing man in forest
+</Chall>
+
+First of all, I completely forgot about this challenge while solving one of the later ones. But the most embarrasing part of all is I forgot how to solve this one during the contest.
+
+Anyway, back to the solve. The archive contains an altered image named `output.png` and an encryptor written in Python. Our challange is to recover `flag.png`.
+
+```py title="script.py"
+from PIL import Image
+import random
+
+FLAG = Image.open("flag.png")
+width, height = FLAG.size
+
+key = [random.randrange(0, 256) for _ in range(width+height+3)]
+
+out = FLAG.copy()
+for i in range(width):
+  for j in range(height):
+    pixel = FLAG.getpixel((i, j))
+    pixel = tuple(x ^ k for x, k in zip(pixel, key))
+    newi, newj = (2134266 + i * 727) % width, (4501511 + j * 727) % height 
+    out.putpixel((newi, newj), pixel)
+
+out.save("output.png")
+```
+
+Let's make some observations.
+
+This encryptor has two layers to it:
+- The first being an `XOR` color layer, per-pixel, with a tiny $key$. Only the first $C$ bytes of $key$ matter where $C \in \{3,4\}$ for RGB/RGBA (due to $zip$).
+- The other being a per-axis affine map, given $W$ is width, $H$ is height, with:
+$$
+i' = (727i + 2134266) \pmod{W}, \qquad
+j' = (727j + 4501511) \pmod{H},
+$$
+
+Talk about the basics of `XOR`, let $C = P \oplus K$. Then $P = C \oplus K$, because `XOR` is its own inverse.
+
+So, for the dominant plaintext color $p_\star$ and dominant ciphertext color $c_\star$:
+$$
+  c_\star = p_\star \oplus K \quad \Rightarrow \quad K = c_\star \oplus p_\star.
+$$
+If the original background was black, $p_\star=(0,0,0)$, so $K = c_\star$. Extend with the alpha byte if the image was RGBA.
+
+Then about the inversion of an affine permutation. We invert
+$$
+  x' = (a x + b) \pmod{n} \quad \Rightarrow \quad
+  x = a^{-1}(x' - b) \pmod{n},
+$$
+where $a^{-1}$ is the modular inverse of $a$ modulo $n$. This exists if $\gcd(a,n)=1$.
+Here $a=727$, so as long as $727 \nmid W$ and $727 \nmid H$, both axes are invertible.
+
+From there we have an attack strategy to reverse what was done. For this whole segment, since we don't see any opaque property of the encrypted image, let's assume alpha is not present.
+
+We can use frequency to recover the `XOR` key: Compute the mode color of the ciphertext RGB histogram, $c_\star$. Set $K_{RGB}=c_\star$. Finding $p_\star$ is easily done with Python.
+
+Then we try inverting the shuffle. Compute
+$$
+  x = a^{-1}\,(x' - b_x) \bmod W,\quad
+  y = a^{-1}\,(y' - b_y) \bmod H.
+$$
+
+Write $(C \oplus K)$ at $(x,y)$. The challenge is solved.
+
+Here's my solve script:
+
+```py
+from PIL import Image
+from collections import Counter
+
+enc_i = Image.open("output.png")
+width, height = enc_i.size
+
+px = list(enc_i.getdata())
+
+colors = Counter(px)
+xor_key = colors.most_common(1)[0][0]
+
+dec_img = Image.new('RGB', (width, height))
+
+inv_w = pow(727, -1, width)
+inv_h = pow(727, -1, height)
+
+for i in range(width):
+  for j in range(height):
+    enc_px = enc_i.getpixel((i, j))
+
+    dec_px = tuple(p ^ k for p, k in zip(enc_px, xor_key))
+
+    org_i = ((i - 2134266) * inv_w) % width
+    org_j = ((j - 4501511) * inv_h) % height
+
+    dec_img.putpixel((org_i, org_j), dec_px)
+
+dec_img.save("flag_decrypted.png")
+```
+
+We get a pretty funny image with the flag handwritten in it.
+
+## crypto/xnor-xnor-xnor
+<Chall
+  title="XNOR XNOR XNOR"
+  authors={["wwm"]}
+  category="crypto"
+  solvedInTime="yes"
+  files={["crypto_xnor-xnor-xnor.tar.gz"]}
+  flag="osu{b3l0v3d_3xclus1v3_my_b3l0v3d}"
+>
+  https://osu.ppy.sh/beatmapsets/1236927#osu/2573164
+</Chall>
+
+Looks like something about `XNOR`. There is a single Python script in the challenge archive.
+
+```py title="script.py"
+import os flag = open("flag.txt", "rb").read() 
+
+def xnor_gate(a, b): 
+  if a == 0 and b == 0: 
+    return 1 
+  elif a == 0 and b == 1: 
+    return 0 
+  elif a == 1 and b == 0: 
+    return 0 
+  else: 
+    return 1 
+    
+def str_to_bits(s): 
+  bits = [] 
+  for x in s: 
+    bits += [(x >> i) & 1 for i in range(8)][::-1] 
+    return bits 
+    
+def bits_to_str(bits): 
+  return bytes([sum(x * 2 ** j for j, x in enumerate(bits[i:i+8][::-1])) for i in range(0, len(bits), 8)]) 
+  
+def xnor(pt_bits, key_bits): 
+  return [xnor_gate(pt_bit, key_bit) for pt_bit, key_bit in zip(pt_bits, key_bits)] 
+
+key = os.urandom(4) * (1 + len(flag) // 4) 
+key_bits = str_to_bits(key) 
+flag_bits = str_to_bits(flag) 
+enc_flag = xnor(xnor(xnor(flag_bits, key_bits), key_bits), key_bits) 
+
+print(bits_to_str(enc_flag).hex()) 
+# 7e5fa0f2731fb9b9671fb1d62254b6e5645fe4ff2273b8f04e4ee6e5215ae6ed6c
+```
+
+`XNOR` is bitwise `NOT` of `XOR`: `xnor(x,k) = ~(x ^ k)`. The two very useful identities we'll be using:
+- When we check the truth table, we can see `xnor(x,k)` is also `~(x) ^ k`.
+- Applying the `NOT` and the `XOR` rule gives us some interesting result:
+```txt showLineNumbers=false
+~((~x) ^ k) = x ^ k
+```
+
+Now apply twice, guess what we get?
+```txt showLineNumbers=false
+xnor(xnor(x,k), k)
+= ~(~(x ^ k) ^ k)
+= x (by identity)
+```
+
+So you're telling me two `XNOR`s just cancel each other. The challenge Python code used three, so that means it's just a single `XNOR`:
+```txt showLineNumbers=false
+xnor(xnor(xnor(x,k), k), k) = xnor(x,k)
+```
+
+Therefore the encryption is just `enc = ~(flag ^ key)`, and from that, we get `key = (~enc) ^ flag`. Across the encrypted message, the challenge script repeats some 4-byte block across the message. We know the first four plaintext bytes, that's just `osu{` established by the rules of this contest.
+
+Recover the flag by building a key stream `flag = (~enc) ^ key_stream`. The challenge is solved.
+
+Here's my solve script:
+
+```py
+enc_hex = "7e5fa0f2731fb9b9671fb1d62254b6e5645fe4ff2273b8f04e4ee6e5215ae6ed6c"
+enc = bytes.fromhex(enc_hex)
+
+def xnor_byte(a,b): return (~(a ^ b)) & 0xFF
+
+prefix = b"osu{"
+k4 = bytes(xnor_byte(p,e) for p,e in zip(prefix, enc[:4]))
+
+ks = k4 * ((len(enc)//4) + 1)
+flag = bytes(xnor_byte(e,k) for e,k in zip(enc, ks))
+print(flag.decode())
+```
+
+## crypto/pls-nominate
+<Chall
+  title='"pls" Nominate'
+  authors={["wwm"]}
+  category="crypto"
+  solvedInTime="no"
+  files={["crypto_pls-nominate.tar.gz"]}
+  flag="osu{pr3tty_pl3453_w1th_4_ch3rry_0n_t0p!?:pleading:}"
+>
+  pls help me get the attention of bns by spamming this message to them pls pls pls
+</Chall>
+
+It's getting a little difficult, I gave up on this at the very beginning. After trying to solve this, I completely understand why I would never solve this in the given timeframe.
+
+The challenge archive includes two files, a plaintext file containing the results of a Python script file.
+
+```py title="script.py"
+from Crypto.Util.number import *
+
+FLAG = open("flag.txt", "rb").read()
+message = bytes_to_long(
+    b"hello there can you pls nominate my map https://osu.ppy.sh/beatmapsets/2436259 :steamhappy: i can bribe you with a flag if you do: " + FLAG
+)
+
+ns = [getPrime(727) * getPrime(727) for _ in range(5)]
+e = 5
+print(len(FLAG))
+print(ns)
+print([pow(message, e, n) for n in ns])
+```
+
+The text file is the output of this script, as expected. Now let's make a couple of observations, we're given a script that does these things:
+- It creates a plaintext `msg = prefix || FLAG`, `FLAG` is obviously unknown and `prefix` is,
+- It then generates 5 `RSA` moduli $n_i = p_i \times q_i$, with each constructed by `getPrime(727) * getPrime(727)`,
+- It uses a small public exponent $e = 5$,
+- Finally it prints the 5 moduli and the 5 ciphertexts $c_i = m^e \mod n_i$
+
+Our challenge is to reverse what this does to our flag. After doing some bits of research, I found out about the *RSA low-exponent setup*, which is supposed to be a classic: If the same plaintext $m$ is encrypted under $e$ different moduli $n_1,...,n_e$ with the same small exponent $e$ and no padding, and if
+$$
+m^e \lt N := \prod_{i=1}^{e}n_i,
+$$
+then the Chinese Remainder Theorem lets us compute the integer
+$$
+M = m^e\quad(\bmod\,N),
+$$
+
+and if actually $M = m^e$ as integers, taking the integer $e$-th root of $M$ recovers $m$ exactly.
+
+That was a mouthful, but that is *Håstad's broadcast attack* in its simplest form. In our case $e = 5$ and we have exactly 5 ciphertexts, this is intended, but there is this one case where we're bust: if $m^5 \geq N$, the Chinese Remainder Theorem will only give us $M = m^5\,(\bmod\,N)$, and the plain integer root may not exist.
+
+Not the end of the world though. If that's actually the case, note that there must exist a positive integer $k$ such that:
+$$
+m^e = M + kN.
+$$
+
+We can probably try small $k$ values and check if $M + kN$ is a perfect $e$-th power. Basically saying we're relying on luck and the kindness of the challenge author here, lol.
+
+Practically this might work. In theory, $k$ could be a really big number because
+$$
+k = \frac{m^e - M}{N},
+$$
+and if $m^e$ is several times bigger then $N$, the ratio is stupid huge. To be brutally honest if $k$ was something of the worst case I wouldn't know how do I approach this challenge.
+
+Here's my solve script. That actually succeeded.
+```py
+# paste ns and cts in, there's line wrap here and they're massive
+# qwq
+ns = []
+cts = []
+e = 5
+
+def integer_nth_root(x: int, n: int):
+  if x < 0:
+    raise ValueError
+  if x == 0:
+    return 0, True
+  lo, hi = 0, 1 << ((x.bit_length() + n - 1) // n)
+  while lo <= hi:
+    mid = (lo + hi) // 2
+    p = mid ** n
+    if p == x:
+      return mid, True
+    if p < x:
+      lo = mid + 1
+    else:
+      hi = mid - 1
+  return hi, (hi ** n == x)
+
+def crt_combine(ns, cts):
+  N = 1
+  for ni in ns:
+    N *= ni
+  total = 0
+  for ni, ci in zip(ns, cts):
+    Ni = N // ni
+    inv = pow(Ni, -1, ni)
+    total += ci * Ni * inv
+  total %= N
+  return total, N
+
+def main():
+  M, N = crt_combine(ns, cts)
+  root, exact = integer_nth_root(M, e)
+  if exact:
+    m = root
+  else:
+    # brute-force small k; tuned to reasonable limit for this CTF instance
+    max_k = 1 << 20
+    m = None
+    for k in range(max_k):
+      y = M + k * N
+      root, exact = integer_nth_root(y, e)
+      if exact:
+        m = root
+        break
+    if m is None:
+      raise SystemExit(1)
+  msg = m.to_bytes((m.bit_length() + 7) // 8, 'big').lstrip(b'\x00')
+  prefix = b"hello there can you pls nominate my map https://osu.ppy.sh/beatmapsets/2436259 :steamhappy: i can bribe you with a flag if you do: "
+  if not msg.startswith(prefix):
+    # fallback: try stripping leading zeros once more, then check
+    msg = msg.lstrip(b'\x00')
+    if not msg.startswith(prefix):
+      raise SystemExit(1)
+  flag = msg[len(prefix):]
+  try:
+    print(flag.decode())
+  except Exception:
+    print(flag.hex())
+
+if __name__ == "__main__":
+  main()
+```
+
+That map was qualified a couple of hours after this challenge airs. `:steamhappy:` indeed.
+
+## crypto/linear-feedback
+<Chall
+  title="Linear Feedback"
+  authors={["wwm"]}
+  category="crypto"
+  solvedInTime="no"
+  files={["crypto_linear-feedback.tar.gz"]}
+  flag="osu{th1s_hr1_i5_th3_m0st_fun_m4p_3v3r_1n_0wc}"
+>
+  this owc map is so fire btw :steamhappy: https://osu.ppy.sh/beatmapsets/2451798#osu/5355997
+</Chall>
+
+There are several things I won't mention again in this writeup since they've been mentioned (and being the good reader you are, you've made it halfway), but when I think the concepts should be mentioned again I will.
+
+I also gave up at this challenge from the very beginning, mainly because I was always scared of *Linear Feedback Shift Registers* (LFSR). That was a nightmare for me during the times I tried to solve other CTFs alone and this concept appeared more than I initially anticipated (be reminded I am a linguistics major, LOL).
+
+But anyway. I'll simplify the script used in the challenge archive:
+
+```py title="script.py (truncated)"
+# Two LFSRs
+key1 = randbits(21)
+key2 = randbits(29)
+
+L1 = LFSR(key1, [2, 4, 5, 1, 7, 9, 8], "{:021b}")
+L2 = LFSR(key2, [5, 3, 5, 5, 9, 9, 7], "{:029b}")
+
+# Output 72 bits: XNOR of the two LFSR output bits at each clock
+bits = [xnor_gate(L1._clock(), L2._clock()) for _ in range(floor(72.7))]  # 72 bits
+print(bits)
+
+# Flag is XOR'd with SHA-256(str(key1)+str(key2)) repeated
+keystream = sha256((str(key1) + str(key2)).encode()).digest() * 2
+print(xor(FLAG, keystream).hex())
+```
+
+This is the instance of that script we're given to work with:
+```txt title="output.txt"
+bits =
+[0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0]
+
+cipherhex =
+9f7f799ec2fb64e743d8ed06ca6be98e24724c9ca48e21013c8baefe83b5a304af3f7ad6c4cc64fa4380e854e8
+```
+Let's make some observations.
+
+The LFSR class is *MSB-first* and it outputs the initial state directly:
+```py
+ob = self.state[0] # first bit of current state
+self.state = self.state[1:] + [ ... ] # shift left, append feedback
+```
+That state is created through `list("{:0wb}".format(key)){:py}`. Because the output is `state[0]` before shifting, the first `n` outputs of an n-bit LFSR are... the n bits of the initial state. In order as well. That means if we know the first 29 outputs of L2, we know `key2`.
+
+The taps. They are sum'd mod 2, with dupes: Feedback is `sum(state[t] for t in taps) % 2{:py}`, and duplicates matter only modulo 2. The effective L2 tap from its original `[5, 3, 5, 5, 9, 9, 7]` is just `{3, 5, 7}`.
+
+Then we know this, because of `XNOR`:
+$$
+ob_i = \left\{ \begin{array}{cl}
+1 & if \ {L1}_i = {L2}_i \\
+0 & if \ {L1}_i \neq {L2}_i
+\end{array} \right. \quad \Rightarrow \quad
+{L2}_i = \left\{ \begin{array}{cl}
+{L1}_i & if \ ob_i = 1 \\
+1 - {L1}_i & if \ ob_i = 0
+\end{array} \right.
+$$
+
+So, guess `key1` to generate 72 output bits of L1. If we can do that, we can *deterministically* derive 72 such bits of L2 as well, then use that to derive `key2`.
+
+From there we have our solve strategy. First, we try to brute-force `key1` since it's small enough (just around 2m tries, that's fine), then for each `key1`:
+- Simulate L1 for 72 clocks
+- Deduce the wanted $L2_i$ as above
+- Take the first 29 bits of that L2 as its initial state, then find `key2`
+- Verify by simulating L2 to see if it produces what we deduced
+- Compute the keystream like the challenge did, then decrypt the flag.
+
+The challenge is solved. Here's my solve script:
+
+```py
+from hashlib import sha256
+
+# pls supply them like above qwq
+obs = []
+cipher = bytes.fromhex()
+
+L1_n, L2_n = 21, 29
+L1_taps = [2,4,5,1,7,9,8]
+L2_taps = [5,3,5,5,9,9,7]
+fmt1 = "{:021b}"
+fmt2 = "{:029b}"
+need = len(obs)
+
+def step_bits(state, taps):
+  # output is state[0]
+  # feedback is sum(state[t]) % 2
+  ob = state[0]
+  fb = 0
+  for t in taps: fb ^= state[t] # xor is fine (sum mod 2)
+  return ob, state[1:] + [fb]
+
+def run_lfsr_bits(key, fmt, taps, outlen):
+  s = list(map(int, fmt.format(key)))
+  out = []
+  for _ in range(outlen):
+    ob, s = step_bits(s, taps)
+    out.append(ob)
+  return out
+
+def bits_to_int_msb(bits):
+  v = 0
+  for b in bits: v = (v<<1) | b
+  return v
+
+def solve():
+  for k1 in range(1<<L1_n):
+    l1 = run_lfsr_bits(k1, fmt1, L1_taps, need)
+    # deduce L2 output stream
+    l2_wanted = [(b if x==1 else 1-b) for b,x in zip(l1, obs)]
+    # recover key2
+    k2 = bits_to_int_msb(l2_wanted[:L2_n])
+    # verify that
+    l2 = run_lfsr_bits(k2, fmt2, L2_taps, need)
+    if l2 != l2_wanted:
+      continue
+    # build keystream like chall if found
+    ks = sha256((str(k1) + str(k2)).encode()).digest() * 2
+    flag = bytes(c ^ k for c, k in zip(cipher, ks))
+    try:
+      txt = flag.decode()
+    except:
+      txt = None
+    if txt and ("{" in txt and "}" in txt):
+      print(txt)
+      return
+
+if __name__ == "__main__":
+    solve()
+```
+
+The brute takes quite some time. For simplicity my solution is using a list, which makes it take a while, I recommend you to look into int-based LFSR! That'd make it seconds.
+
+Also, I've read one other writeup of this same problem that uses *Gaussian elimination*, which seems to be able to get the exact initial states in a single shot, not brute-forcing like this. I think that solution is wonderful, but it has no explanation to it, which is quite sad.
+
+Anyway, `:steamhappy:`, I like that song as well, being a taiko player.
+
+## crypto/ssss
+<Chall
+  title="QuadS"
+  authors={["wwm"]}
+  category="crypto"
+  solvedInTime="yes"
+  files={["crypto_ssss.tar.gz"]}
+  flag="osu{0n3_hundr3d_p3rc3nt_4ccur4cy!}"
+>
+  can you ss this secret sharing scheme?
+
+  `nc ssss.challs.sekai.team 1337`
+</Chall>
+
+So, this one. Being the third least solved challenge at the time I was about to submit the flag (it was around 50 solves, which is abysmally low compared to the actual challenges later on), I was wondering what was wrong.
+
+The challenge archive, outside of that `netcat` server we're supposed to get things, has a single script file. I'll once again truncate it:
+
+```py title="script.py (truncated)"
+p = 2**255 - 19
+k = 15
+SECRET = random.randrange(0, p)
+
+def lcg(x, a, b, p): return (a*x + b) % p
+
+a = randrange(0,p)
+b = randrange(0,p)
+poly = [SECRET]
+while len(poly) != k:
+    poly.append(lcg(poly[-1], a, b, p))
+
+for _ in range(k - 1):
+    x = int(input())
+    print(sum(c * x^i (mod p))) # that's not xor
+
+if int(input("secret? ")) == SECRET: print(FLAG)
+```
+
+Checking the server's behavior, it allows us to query $k - 1 = 14$ values of
+$$
+f(x) = \sum_{i=0}^{14}c_i\ x^i \quad (\bmod\,p),
+$$
+where the unknown coeff. vector $c = (c_0,...,c_{14})$ isn't arbitrary, but satisfies the LCG relation
+$$
+c_{i+1} = ac_i + b \quad (\bmod\,p) \quad (i = 0,...,13)
+$$
+with unknown $a, b \in \mathbb{F}_p$. `SECRET` is $c_0$.
+
+We can draw a rough solve plan like this:
+- Obviously try to probe at $x = 1,2,...,14$ to get 14 equations $A\,c = y\ (\bmod\ p)$ where $A$ is a $14 \times 15$ matrix. Interestingly this is a Vandemonde(-ish) matrix as well.
+- Then we solve the linear system modulo $p$, as in a particular solution $c_\star$ plus a 1-dimensional nullspace spanned by $n$ (rank = 14, generically):
+$$
+c = c_\star + tn\quad(\bmod\ p).
+$$
+- Impose the LCG structure $c_{i+1} = ac_i + b$ to eliminate $a$ and $b$, then derive a quadratic in $t$. We'll solve that in $\mathbb{F}_p$.
+- For each $t$, try to reconstruct $c$, find $a,\ b$ and check if both conditions hold: that LCG holds for all indices and it matches the oracle evals.
+
+Oh but where does the quadratic come from, though?
+
+Check this derivation out: from the linear solve, for each $i$, we have
+$$
+c_i(t) = c_{\star, i} + t\ n_i\quad(\bmod\ p).
+$$
+
+Define first differences:
+$$
+\Delta_i(t) := c_{i+1}(t) - c_i(t) = 
+(c_{\star, i + 1} - c_{\star, i}) + t(n_{i + 1} - n_i)\quad(\bmod\ p)
+$$
+
+Let $C_i = c_{\star, i + 1} - c_{\star, i}$ and $D_i = n_{i + 1} - n_i$,
+$\Delta_i(t) = C_i + tD_i$ is affine in $t$. Call that (1).
+
+From the LCG,
+$$
+c_{i + 1} = ac_i + b \Rightarrow \Delta_i = c_{i + 1} - c_i = (a - 1)c_i + b.
+$$
+
+When we plug $c_{i + 1}$ back in, we get:
+$$
+\Delta_{i + 1} = a\Delta_i\quad(\bmod\ p).
+$$
+
+Therefore, whenever $\Delta_i(t) \neq 0$,
+$$
+a = \Delta_{i + 1}(t)\ \Delta_i(t)^{-1}\quad(\bmod\ p).
+$$
+
+Consistency over two distinct indices $i \neq j$ forces the ratios to match:
+$$
+\frac{\Delta_{i + 1}(t)}{\Delta_i(t)} = \frac{\Delta_{j + 1}(t)}{\Delta_j(t)}\quad(\bmod\ p).
+$$
+
+Now we plug (1) back in, cross-multiply, we get:
+$$
+(C_{i + 1} + tD_{i + 1})(C_j + tD_j) - (C_{j + 1} + tD_{j + 1})(C_i + tD_i) = 0.
+$$
+
+That's a quadratic with term $t$.
+$$
+\alpha t^2 + \beta t + \gamma = 0\quad(\bmod\ p),
+$$
+
+with $\alpha = (D_{i + 1}D_j - D_{j + 1}D_i)$, $\beta = (C_{i + 1}D_j + D_{i + 1}C_j - C_{j + 1}D_i - D_{j + 1}C_i)$ and $\gamma = (C_{i + 1}C_j - C_{j + 1}C_i)$.
+
+We solve this in $\mathbb{F}_p$ and get two $t$ candidates. Now that's why this challenge is named like that, `QuadS`.
+
+For each $t$ candidate:
+- Build $c_i = c_{\star, i} + tn_i$
+- Pick any $i$ with $\Delta_i \neq 0$ and set $a = \Delta_{i + 1}\ \Delta_i^{-1}$
+- Try to find $b = c_1 - ac_0$
+- Finally, verify if $c_{i + 1} = ac_i + b$ for all $i$, and that $f(x)$ evaluates to what we observed.
+
+That's our $c_0$ = `SECRET`. The challenge is solved.
+
+Here's my solve script. Note that this script does not do the `nc` part itself, just so I can present the math concepts without the noise:
+
+```py
+p = 2**255 - 19
+k = 15
+
+# paste your 14 oracle outputs (f(1)..f(14)) here qwq
+ys = []
+
+def inv(x):  # mod inverse
+    return pow(x % p, p-2, p)
+
+def ts_sqrt(a):  # Tonelli–Shanks sqrt mod p
+  a %= p
+  if a == 0: return 0
+  if pow(a, (p-1)//2, p) != 1: return None
+  q, s = p-1, 0
+  while q % 2 == 0: q //= 2; s += 1
+  z = 2
+  while pow(z, (p-1)//2, p) != p-1: z += 1
+  m, c = s, pow(z, q, p)
+  t, r = pow(a, q, p), pow(a, (q+1)//2, p)
+  while t != 1:
+    i, t2i = 1, pow(t, 2, p)
+    while t2i != 1:
+      i += 1
+      t2i = pow(t2i, 2, p)
+    b = pow(c, 1 << (m-i-1), p)
+    m, c = i, (b*b) % p
+    t, r = (t*c) % p, (r*b) % p
+  return r
+
+def solve_quadratic(a, b, c):  # ax^2+bx+c=0 over F_p
+  a %= p; b %= p; c %= p
+  if a == 0:
+    return [] if b == 0 and c != 0 else ([(-c*inv(b))%p] if b else list())
+  inv2 = inv(2)
+  disc = (b*b - 4*a*c) % p
+  s = ts_sqrt(disc)
+  if s is None: return []
+  x1 = ((-b + s) * inv(2*a)) % p
+  x2 = ((-b - s) * inv(2*a)) % p
+  return [x1] if x1 == x2 else [x1, x2]
+
+def gauss_mod(A, b):
+  """Solve A*c=b (mod p) with A: m x n (here 14x15).
+  Returns particular solution 'part' and a single null vector 'null'."""
+  m, n = len(A), len(A[0])
+  M = [A[i][:] + [b[i]%p] for i in range(m)]
+  row, piv = 0, []
+  for col in range(n):
+    if row == m: break
+    sel = next((r for r in range(row, m) if M[r][col] % p), None)
+    if sel is None: continue
+    M[row], M[sel] = M[sel], M[row]
+    iv = inv(M[row][col])
+    for c in range(col, n+1): M[row][c] = (M[row][c]*iv) % p
+    for r in range(m):
+      if r != row and M[r][col] % p:
+        f = M[r][col]
+        for c in range(col, n+1):
+          M[r][c] = (M[r][c] - f*M[row][c]) % p
+    piv.append(col); row += 1
+  part = [0]*n
+  for r, col in enumerate(piv): part[col] = M[r][n]
+  free = [c for c in range(n) if c not in piv]
+  assert len(free) == 1, "expected nullspace dim 1"
+  f = free[0]
+  null = [0]*n; null[f] = 1
+  for r, col in enumerate(piv): null[col] = (-M[r][f]) % p
+  return part, null
+
+def recover_secret(xs, ys):
+  # build 14x15 Vandermonde-like matrix for x^0..x^14
+  A = []
+  for x in xs:
+    row, powx = [], 1
+    for _ in range(k):
+      row.append(powx)
+      powx = (powx * x) % p
+    A.append(row)
+  part, null = gauss_mod(A, ys)
+
+  # first-difference arrays C_i, D_i for i=0..12
+  C = [(part[i+1]-part[i]) % p for i in range(k-1)]
+  D = [(null[i+1]-null[i]) % p   for i in range(k-1)]
+
+  # build one quadratic in t using indices i and j=i+1
+  # a t^2 + b t + g = 0
+  for i in range(k-3):
+    j = i+1
+    alpha = (D[i+1]*D[j] - D[j+1]*D[i]) % p
+    beta  = (C[i+1]*D[j] + D[i+1]*C[j] - C[j+1]*D[i] - D[j+1]*C[i]) % p
+    gamma = (C[i+1]*C[j] - C[j+1]*C[i]) % p
+    sols = solve_quadratic(alpha, beta, gamma)
+    for t in sols:
+      c = [(part[u] + t*null[u]) % p for u in range(k)]
+      # derive a,b from first nonzero diff
+      a = None
+      for u in range(k-2):
+          den = (c[u+1]-c[u]) % p
+          if den: a = ((c[u+2]-c[u+1]) * inv(den)) % p; break
+      if a is None: continue
+      b = (c[1] - a*c[0]) % p
+      # verify LCG
+      if all((c[u+1] - (a*c[u]+b)) % p == 0 for u in range(k-1)):
+        # verify evals
+        ok = True
+        for x,y in zip(xs, ys):
+          val, powx = 0, 1
+          for u in range(k):
+            val = (val + c[u]*powx) % p
+            powx = (powx * x) % p
+          if val != y % p: ok = False; break
+        if ok: return c[0]  # SECRET
+  raise SystemExit("no solution found; check inputs")
+
+def main():
+  if len(ys) != k-1: raise SystemExit("need 14 values in ys")
+  xs = list(range(1, k))  # 1..14
+  secret = recover_secret(xs, [y % p for y in ys])
+  print(secret)
+
+if __name__ == "__main__":
+  main()
+```
+
+Yeah this is hard. Not very `:steamhappy:` this time, but we got 100% accuracy, fast.
+
+## crypto/please-nominate
+<Chall
+  title="Please Nominate."
+  authors={["wwm"]}
+  category="crypto"
+  solvedInTime="no"
+  files={["crypto_please-nominate.tar.gz"]}
+  flag="osu{0mg_my_m4p_f1n4lly_g0t_r4nk3d_1m_s0_h4ppy!!}"
+>
+  ok this time i'm going to be a bit more nice and personal when sending my message
+</Chall>
+
+This challenge is one of the two `3/5`s difficulty-wise, denoted by the challenge author.
+
+The moment I see `3/5` after bugging myself at the previous challenge, which was denoted as a `2/5`, prompts me immediately this has got something to do with `Sage`. I gave up at that point, lol.
+
+After doing some research again since I was not equipped with the sufficient knowledge to solve the easier variant of this challenge, `crypto/pls-nominate`, this seems like it was another *Håstad-style small-e broadcast attack* with different known prefixes.
+
+We can just see the challenge like this:
+- Every ciphertext is a cube,
+- Every plaintext is `known_prefix || FLAG`,
+- Every `FLAG` has the same length for all three messages,
+- There are three coprime moduli $n_1, n_2, n_3$,
+- Recover the small unknown suffix $x$
+
+So the entire challenge is basically a single cubic congruence modulo $N = n_1n_2n_3$ with a small root, then we run a univariate Coppersmith to pull that root out.
+
+Let $L$ be the number of `FLAG` bytes. For each BN in `["Plus4j", "Mattay", "Dailycore"]`, define its prefix string $p_i = $ "`hi there {BN}, `", then turn these prefixes into integers:
+$$
+A_i = 256^Lf(p_i),
+$$
+with $f$ a `bytes_to_long` function.
+
+Why the $256^L$ though? Now, that's because concatenation in base-256 is
+$$
+f(p\ ||\ \text{FLAG}) = 256^Lf(p) + f(\text{FLAG}).
+$$
+
+Let the `FLAG`, as an integer, be $x = f(\text{FLAG})$, so each message is
+$$
+m_i = A_i + x,\quad \text{with}\ 0 \leq x < 256^L.
+$$
+
+Since the challenge uses $e = 3$, each ciphertext is
+$$
+c_i = (A_i + x)^3\quad (\bmod\ n_i)\quad (i = 1, 2, 3)
+$$
+with pairwise coprime $n_i$, each a product of two 727-bit primes.
+
+Now we turn the three congruences into one cubic modulo $N$. Expand $(A_i + x)^3$ and move $c_i$ to the left, we get:
+$$
+x^3 + (3A_i)x^2 + (3A^2_i)x + (A^3_i - c_i) = 0\quad (\bmod\ n_i).
+$$
+
+For each coeff. position we know its residue mod $n_i$. Then, we build the global coeffs. modulo $N = n_1n_2n_3$ using the Chinese Remainder Theorem coeff. wise:
+- $C_2 = 3A_i\quad (\bmod\ n_i)$,
+- $C_1 = 3A^2_i\quad (\bmod\ n_i)$,
+- $C_0 = A^3_i - c_i\quad (\bmod\ n_i)$.
+
+We get integers $C_2, C_1, C_0$ with
+$$
+F(x) := x^3 + C_2x^2 + C_1x + C_0 \equal 0\quad (\bmod\ N).
+$$
+
+Any $x$ that solves the three original congruences will satisfy that.
+
+Our last work is to just briefly check over the small-root condition. Bitlengths:
+- Each $n_i$ is $\approx$ 1454 bits
+- $N = n_1n_2n_3 \approx 3 \times 1454 \approx 4362$ bits.
+- $N^{1/3} \approx 2^{1454}$.
+
+The `FLAG` has $L = 147$ bytes, so $x < 256^{147} = 2^{1176} < N^{1/3}$, we're good.
+
+Finally, recover $x$ with univariate Coppersmith. The challenge is solved.
+
+Here's my solve script:
+
+```py title="solve.sage"
+from sage.all import *
+from Crypto.Util.number import bytes_to_long, long_to_bytes
+
+L = 147
+
+# paste them in qwq
+data = [
+  ("Plus4j", Integer(), Integer()),
+  ("Mattay", Integer(), Integer()),
+  ("Dailycore", Integer(), Integer()),
+]
+
+N = Integer(1)
+for _, n, _ in data:
+  N *= n
+
+P.<x> = PolynomialRing(Zmod(N))
+f = 0
+const = 0
+shift = 2**(8*L)  # 256^L
+
+# cubic via CRT weighting (same thing as coefficient-wise CRT)
+for name, n, c in data:
+  A = Integer(bytes_to_long(f"hi there {name}, ".encode())) * shift
+  w = N // n
+  f += w * (x**3 + 3*A*x**2 + 3*(A*A % n)*x)
+  const += w * (c - pow(A, 3, n))
+
+f = (f - const).monic()
+
+# find small root x < 256^L (the flag as integer)
+for i in range(1, 101):
+  roots = f.small_roots(X=shift, beta=i/100)
+  if roots:
+    print(long_to_bytes(int(roots[0])))
+    break
+```
+
+## crypto/ssssp
+<Chall
+  title="QuadS+"
+  authors={["wwm"]}
+  category="crypto"
+  solvedInTime="no"
+  files={["crypto_ssss+.tar.gz"]}
+  flag="osu{0r_d1d_y0u_us3_fl45hl1ght_1nst34d?}"
+>
+  can you do it again, but with hidden?
+
+  `nc ssssp.challs.sekai.team 1337`
+</Chall>
+
+The following challenge is rated `3/5` by the challenge author.
+
+Now, I've seen some, supposedly, `4/5`, `crypto` challenges. I obviously can solve none of them, and I know for sure two days aren't going to cut it for those challenges for many, many teams. The general idea around these very difficult challenges is we get away with several *tricks* in our sleeves, this is no exception to that.
+
+By the time I'm writing this (October 29), I haven't seen any writeup for this challenge posted. I can't fact-check my maths and tricks, given this is the hardest `crypto` challenge of this contest, some of these might convey the wrong idea.
+
+Now back to the challenge. The only script file in the challenge archive looks *awfully* similar to `QuadS`, but this time we have to deal with a *hidden modulus* $pp$.
+
+Summarizing the challenge, we once again need to find $c_0$, our `SECRET`. The server:
+- Has this evaluation field $p = 2^{255} - 19$
+- Has this hidden modulus $pp$ that's a random 256-bit prime
+- Has the coeffs. $\{ c_i \}^{k - 1}_{i = 0}$, $k = 15$, generated by an LCG modulo $pp$:
+$$
+c_0 = S \in [0,p),\quad c_{i + 1} = ac_i + b\quad (\bmod\ pp)
+$$
+- Has an oracle that returns $f(x) = \sum_{i = 0}^{14}c_ix^i\ (\bmod\ p)$ for our chosen $x$.
+
+Here comes the tricks.
+
+#### Isolating the odd coeffs. mod p with symmetry
+
+Query in pairs $(x,\ p - x)$. Modulo $p$, we have $p - x = -x$, then:
+$$
+f(x) - f(-x) = \sum_{i = 0}^{14}c_i\big(x^i - (-x)^i\big)
+= \sum_{i\ odd}^{}c_i\big(x^i - (-x)^i\big) \\
+= \sum_{i\ odd}^{}c_i(2x^i) = 2x\sum_{j = 0}^{6}c_{2j + 1}\ x^{2j}.
+$$
+
+Define
+$$
+O(x) := \frac{f(x) - f(-x)}{2x}\ (\bmod\ p) = \sum_{j=0}^{6}c_{2j + 1}(x^2)^j\ (\bmod\ p).
+$$
+
+Choose 7 distinct $x \in \{1,...,7\}$, then with $s_i = x^2_i$ we get a deg-6 polynomial in $s$ with coeffs. ${\{c_{2j + 1}\}}^6_{j = 0}$. Build the $7 \times 7$ Vandermonde again on ${s_i}$, then solve:
+$$
+\underbrace{
+  \begin{bmatrix}
+  1 & s_1 & s_1^2 & \cdots & s_1^6 \\
+  \vdots & \vdots & & & \vdots \\
+  1 & s_7 & s_7^2 & \cdots & s_7^6
+  \end{bmatrix}
+}_M \cdot
+\underbrace{
+  \begin{bmatrix}
+  c1 \\ c3 \\ \vdots \\ c13
+  \end{bmatrix}
+}_{c_{odd}} =
+\underbrace{
+  \begin{bmatrix}
+  O(x_1) \\ \vdots \\ O(x_7)
+  \end{bmatrix}
+}_O
+\quad (\bmod\ p).
+$$
+
+Solving that gives us the residues modulo $p$:
+$$
+c_{2j + 1} = r_{2j + 1}\quad (\bmod\ p), \qquad j = 0,...,6.
+$$
+
+#### Lift each odd coeff. $c_{2j + 1} \in \{r_{2j + 1},\ r_{2j + 1} + p\}$
+
+Each integer representative is either the residue $r$ or $r + p$, since the real coeffs. live modulo $pp$ but we only know them modulo $p$, and $pp \approx 2^{256}$ is close to $2p$. Also, it can't be $r + 2p$ since $2p > 2^{256}$, which exceeds the range $0 \le c_i < pp$. So, for each odd index we introduce something $m_j \in \{0,1\}$:
+$$
+Y_j = r_{2j + 1} + m_jp\quad (\text{as integers in}\ [0,\ pp)).
+$$
+
+That gives us a 7-term subsequence $Y_0, Y_1, ..., Y_6$ of the true integer odd coeffs.
+
+#### The odd subsequence is an LCG!
+
+Alright, this is going to be wild. From the original LCG modulo $pp$,
+$$
+c_{i + 1} = ac_i + b\quad (\bmod\ pp).
+$$
+
+What if we try skipping one step?
+$$
+c_{i + 2} = ac_{i + 1} + b = a(ac_i + b) + b = a^2c_i + (a + 1)b\quad (\bmod\ pp).
+$$
+
+So, $Y_j = c_{2j + 1}$ also satisfies an LCG!
+$$
+Y_{j + 1} = AY_j + C\quad (\bmod\ pp), \qquad A = a^2,\ C = b(a + 1).
+$$
+
+Now we can run standard LCG modulus-recovery on $Y$.
+
+#### Recover the $pp$
+
+Let's look at an LCG $X_{n + 1} = AX_n + C\ (\bmod\ M)$. We can see the quantity
+$$
+g_n = (X_{n + 2} - X_{n + 1})(X_n - X_{n - 1}) - (X_{n + 1} - X_n)^2
+$$
+is always a multiple of M, therefore $\gcd(g_2, g_3, ...)$ just reveals $M$. Well, up to a unit that is.
+
+So in our code, we just do this to recover $pp$:
+- Enumerate the $2^7$ masks $m$,
+- Build $Y_j = r_{2j + 1} + m_jp$,
+- Compute $pp = \gcd \big\{(Y_{i + 3} - Y_{i + 2})(Y_{i + 1} - Y_i) - (Y_{i + 2} - Y_{i + 1})^2\big\}$,
+- Stop when $pp$ is a large prime.
+
+#### Reveal the secret
+
+Now we know $pp$. The last thing we have to do is work in $\mathbb{F}_{pp}$, our goal is to recover $A = a^2$ and $C = b(a + 1)$, then $a,\ b$, finally, the `SECRET`.
+
+From any three consecutive terms $Y_0, Y_1, Y_2$,
+$$
+A = \frac{Y_2 - Y_1}{Y_1 - Y_0}\ (\bmod\ pp), \qquad C = Y_1 - AY_0\ (\bmod\ pp).
+$$
+
+Since $A = a^2$, try take a square root in $\mathbb{F}_{pp}$: $a = \sqrt{A}$.
+
+Solving for $b$ shouldn't be hard. $b = C(a + 1)^{-1}\ (\bmod\ pp).$
+
+Finally, use $c_1 = ac_0 + b \Rightarrow c_0 = (c_1 - b)a^{-1}$, and here $c_1 = Y_0$. So,
+$$
+\boxed{S = c_0 = (Y_0 - b)a^{-1}\ (\bmod\ pp)}
+$$
+
+The challenge *should* be solved. Here's my solve script.
+
+```py
+from math import gcd
+
+p = 2**255 - 19
+k = 15
+
+# paste your pairs here qwq
+y_pairs = []
+
+def inv_mod(a, m):
+  a %= m
+  if a == 0:
+    raise ZeroDivisionError("inv_mod(0)")
+  return pow(a, m - 2, m)
+
+# Tonelli–Shanks for odd prime moduli
+def mod_sqrt(a, prime):
+  a %= prime
+  if a == 0:
+    return 0
+  if pow(a, (prime - 1) // 2, prime) != 1:
+    return None
+  # factor p-1 = q * 2^s with q odd
+  q, s = prime - 1, 0
+  while q % 2 == 0:
+    q //= 2
+    s += 1
+  # find z a quadratic non-residue
+  z = 2
+  while pow(z, (prime - 1) // 2, prime) != prime - 1:
+    z += 1
+  c = pow(z, q, prime)
+  r = pow(a, (q + 1) // 2, prime)
+  t = pow(a, q, prime)
+  m = s
+  while t != 1:
+    # find least i in [1..m-1] with t^(2^i) = 1
+    i, t2i = 1, pow(t, 2, prime)
+    while t2i != 1:
+      i += 1
+      t2i = pow(t2i, 2, prime)
+    b = pow(c, 1 << (m - i - 1), prime)
+    r = (r * b) % prime
+    c = (b * b) % prime
+    t = (t * c) % prime
+    m = i
+  return r
+
+def is_probable_prime(n):
+  if n < 2: return False
+  small_primes = [2,3,5,7,11,13,17,19,23,29,31]
+  for sp in small_primes:
+    if n % sp == 0:
+      return n == sp
+  # write n-1 = d * 2^s
+  d, s = n - 1, 0
+  while d % 2 == 0:
+    d //= 2; s += 1
+  # bases good for ~512 bits
+  for a in [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37]:
+    if a % n == 0:
+      continue
+    x = pow(a, d, n)
+    if x == 1 or x == n - 1:
+      continue
+    skip = False
+    for _ in range(s - 1):
+      x = (x * x) % n
+      if x == n - 1:
+        skip = True
+        break
+    if not skip:
+      return False
+  return True
+
+# solve 7x7 linear system over F_p to recover c_odd residues
+def solve_odd_coeffs_mod_p(y_pairs):
+  if len(y_pairs) != 7:
+    raise SystemExit("need exactly 7 pairs qwq")
+  O = []
+  svals = []
+  inv2 = inv_mod(2, p)
+  for i, (fy, fneg) in enumerate(y_pairs, start=1):
+    num = (fy - fneg) % p
+    den = (2 * i) % p
+    oi = (num * inv_mod(den, p)) % p # O(i) = (f(i)-f(-i)) / (2i)
+    O.append(oi)
+    svals.append((i * i) % p) # s = i^2
+  # build Vandermonde M[j][t] = s_j^t for t=0..6
+  M = [[1] * 7 for _ in range(7)]
+  for r in range(7):
+    for c in range(1, 7):
+      M[r][c] = (M[r][c-1] * svals[r]) % p
+  # gaussian elimination mod p: solve M * x = O
+  for r in range(7):
+    M[r].append(O[r] % p)
+  # eliminate
+  row = 0
+  for col in range(7):
+    # find pivot
+    piv = None
+    for r in range(row, 7):
+      if M[r][col] % p != 0:
+        piv = r; break
+    if piv is None:
+      continue
+    M[row], M[piv] = M[piv], M[row]
+    invp = inv_mod(M[row][col], p)
+    for c in range(col, 8):
+      M[row][c] = (M[row][c] * invp) % p
+    for r in range(7):
+      if r != row and M[r][col] % p != 0:
+        f = M[r][col]
+        for c in range(col, 8):
+          M[r][c] = (M[r][c] - f * M[row][c]) % p
+    row += 1
+  x = [0]*7
+  # rows are now [I | x]
+  for r in range(7):
+    lead = None
+    for c in range(7):
+      if M[r][c] == 1:
+        lead = c; break
+    if lead is not None:
+      x[lead] = M[r][7]
+  # x = [c1, c3, c5, c7, c9, c11, c13] mod p
+  return x  # residues modulo p
+
+def recover_q_from_odd_lifts(rmods):
+  # rmods: [r1, r3, r5, r7, r9, r11, r13] residues mod p
+  # each actual coefficient Y_j ∈ {rmods[j], rmods[j]+p}
+  best = None
+  for mask in range(1 << 7):
+    Y = [(rmods[j] + (((mask >> j) & 1) * p)) for j in range(7)]  # integers
+    # GCD trick: Q = gcd(d_{i+1}^2 - d_i d_{i+2})
+    d = [Y[i+1] - Y[i] for i in range(6)]
+    g = 0
+    for i in range(4):  # enough samples: i=0..3 uses d0..d5
+      gi = d[i+1]*d[i+1] - d[i]*d[i+2]
+      gi = abs(gi)
+      g = gi if g == 0 else gcd(g, gi)
+    if g.bit_length() < 200:  # quick reject small gcds
+      continue
+    # try to factor as a prime (likely pp)
+    if is_probable_prime(g):
+      best = (g, Y)
+      break
+    # sometimes g is a multiple; try to strip small factors
+    tmp = g
+    for small in [3,5,7,11,13,17,19,23,29,31]:
+      while tmp % small == 0:
+        tmp //= small
+      if tmp.bit_length() >= 200 and is_probable_prime(tmp):
+        best = (tmp, Y)
+        break
+  if not best:
+    raise SystemExit("failed to recover q")
+  return best  # (q, Y)
+
+def try_params_from_odd(Y, q):
+  den = (Y[1] - Y[0]) % q
+  if den == 0:
+    # shift one step if denominator zero
+    den = (Y[2] - Y[1]) % q
+    if den == 0:
+      return None
+    A = ((Y[3] - Y[2]) * pow(den, -1, q)) % q
+    C = (Y[2] - A * Y[1]) % q
+    y0 = Y[1]
+  else:
+    A = ((Y[2] - Y[1]) * pow(den, -1, q)) % q
+    C = (Y[1] - A * Y[0]) % q
+    y0 = Y[0]
+  # a = sqrt(A) in F_q -> two candidates ±a
+  a_root = mod_sqrt(A, q)
+  if a_root is None:
+    return None
+  for a in {a_root, (-a_root) % q}:
+    if (a + 1) % q == 0:
+        continue
+    b = (C * pow(a + 1, -1, q)) % q
+    if a % q == 0:
+        continue
+    # S = c0 = (c1 - b) / a  ; here c1 = Y[0]
+    secret = ((Y[0] - b) * pow(a, -1, q)) % q
+    return int(secret)
+  return None
+
+def main():
+  if len(y_pairs) != 7:
+    raise SystemExit("fill y_pairs with 7 tuples pls")
+  # solve for odd coeffs mod p
+  rmods = solve_odd_coeffs_mod_p(y_pairs)  # length 7: c1,c3,...,c13 mod p
+  # lift and recover q
+  q, Y = recover_q_from_odd_lifts(rmods)
+  # recover a,b (via A=a^2, C=b(a+1)) and SECRET
+  secret = try_params_from_odd(Y, q)
+  if secret is None:
+    raise SystemExit(1)
+  if secret >= p:
+    secret %= p
+  print(secret)
+
+if __name__ == "__main__":
+  main()
+```
+
+Now I think there's probably multiple way, way shorter solves and many way simpler solves of this one. However I couldn't think of a way that could get around the usage of the tricks I used, math dalaos please help...
+
+At least, `:steamhappy:`.
+
+That's every `crypto` challenge solved and explained in detail. Well, in my ability that is.

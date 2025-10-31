@@ -11,3 +11,5 @@ pnpm-debug.log*
 .idea/
 teaser.pptx
 ~$teaser.pptx
+bun.lock
+src/content/examples
