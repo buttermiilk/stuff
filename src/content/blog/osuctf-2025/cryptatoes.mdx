@@ -94,9 +94,9 @@ $$
 where $a^{-1}$ is the modular inverse of $a$ modulo $n$. This exists if $\gcd(a,n)=1$.
 Here $a=727$, so as long as $727 \nmid W$ and $727 \nmid H$, both axes are invertible.
 
-From there we have an attack strategy to reverse what was done. For this whole segment, since we don't see any opaque property of the encrypted image, let's assume alpha is not present.
+From there we have a solve strategy to reverse what was done. For this whole segment, since we don't see any opaque property of the encrypted image, let's assume alpha is not present.
 
-We can use frequency to recover the `XOR` key: Compute the mode color of the ciphertext RGB histogram, $c_\star$. Set $K_{RGB}=c_\star$. Finding $p_\star$ is easily done with Python.
+We can use frequency to recover the `XOR` key: Compute the mode color of the ciphertext RGB histogram, $c_\star$. Finding $p_\star$ is easily done with Python.
 
 Then we try inverting the shuffle. Compute
 $$
@@ -198,14 +198,14 @@ print(bits_to_str(enc_flag).hex())
 ~((~x) ^ k) = x ^ k
 ```
 
-Now apply twice, guess what we get?
+Now apply twice, we get:
 ```txt showLineNumbers=false
 xnor(xnor(x,k), k)
 = ~(~(x ^ k) ^ k)
 = x (by identity)
 ```
 
-So you're telling me two `XNOR`s just cancel each other. The challenge Python code used three, so that means it's just a single `XNOR`:
+So two `XNOR`s just cancel each other. The challenge Python code used three, so that means it's just a single `XNOR`:
 ```txt showLineNumbers=false
 xnor(xnor(xnor(x,k), k), k) = xnor(x,k)
 ```
