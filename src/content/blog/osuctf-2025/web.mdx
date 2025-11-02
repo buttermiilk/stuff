@@ -110,4 +110,94 @@ This reads the flag and serves it as is. Upon uploading that, what we see is thi
 
 The challenge is solved.
 
+## web/scorepost-generator
+<Chall
+  title="Scorepost Generator"
+  authors={["strellic"]}
+  category="web"
+  solvedInTime="yes"
+  files={["web_scorepost-generator.tar.gz"]}
+  flag="osu{but_h0w_do_1_send_my_fc_now??}"
+  instancer="no instancer"
+>
+  let's see your crazy plays
+</Chall>
+
+Entering the challenge, we are presented with this window:
+
+![Challenge page](./assets/web/scorepost-gen/1.png "Challenge page")
+
+To start off, an `.osz` file is basically a zip file made for importing levels for [osu!](https://osu.ppy.sh), and an `.osr` file is a player's replay export file on a beatmap. On a quick behavior check, this page generates an image of the player's score. My initial expectations for the way to solve this challenge is some sort of escalation crafted inside the `.osz` file, because that's common. There's probably nothing to do with the `.osr` file.
+
+Checking the source code that hosts this challenge, we can inspect what the page does: *it extracts and reads stuff in our `.osz`, does a few checks, reads the replay data, then crafts the image*. There's not really anything suspicious in the source functions themselves, except for some insignificant hacks here and there, until we check the Docker image used for this challenge:
+
+```dockerfile title="Dockerfile"
+# HMMMMMMMMMMMMMMMMMMMMMMMMM......
+FROM vulhub/imagemagick:7.1.0-49
+# what an interesting image to use...
+```
+
+I could only guess pointing that out is the “beginner-friendly” part of the challenge, lol.
+
+Going back to check, you could find the code segment that used `imagemagick` to read the beatmap's background image, right inside `scorepost.js`:
+
+```js title="scorepost.js" startLineNumber=72
+const size = await new Promise((resolve, reject) => {
+  gm(bgImagePath).size((err, size) => {
+    if (err) reject(err);
+    else resolve(size);
+  });
+});
+```
+
+Our attack surface is on this line, because `convert` is an `imagemagick` command!
+
+```js title="scorepost.js" startLineNumber=165
+await execFileAsync('convert', compositeArgs, { maxBuffer: 50 * 1024 * 1024 });
+```
+![Use convert by installing imagemagick](./assets/web/scorepost-gen/2.png "Use convert by installing imagemagick")
+
+So it looks like we need to craft a beatmap background image that exploits something in `imagemagick`. Now, we can find the image used for the challenge here, https://github.com/vulhub/vulhub/tree/master/imagemagick, and navigating around the three CVE directories, `CVE-2022-44268` is the most interesting:
+
+> *In the version prior to 7.1.0-51 on ImageMagick, there is [a] vulnerability that is able to be used to read [external files] when [modifying] a PNG file.*
+
+The Docker image used is using `imagemagick 7.1.0-49`, essentially saying we can use that CVE to complete the challenge. The technical details of this CVE is beyond the scope of this writeup, but ultimately it comes down to injecting a `tEXt` payload inside an image file to retrieve the content of a file of choice. The repository has also kindly provided a small proof-of-concept Python script to achieve exactly this.
+
+That Python script does two things, but let's focus on the first one, making our exploit background:
+
+```py title="poc.py" startLineNumber=54
+png.write_chunk(f, b'IHDR', IHDR)
+png.write_chunk(f, b'IDAT', IDAT)
+png.write_chunk(f, b"tEXt", b"profile\x00" + read_filename.encode())
+png.write_chunk(f, b'IEND', b'')
+```
+
+This simply makes a small PNG file with the payload in it, with the payload injected on line 3. Text metadata is something legal in the PNG specifications, but if a tool like ImageMagick naively interprets that `tEXt` chunk, it could just accidentally take a file's content and embed it into the processed image itself. Here we want the flag's content, and the flag is at the root of the docker environment, so we just supply `/flag.txt`:
+
+```bash
+python3 poc.py generate -o Kaijuu_ni_Naritai.png -r /flag.txt
+```
+
+Now we need the `.osz` file we'll inject the image in, that's easily obtainable. I did this by replacing the background in the Kaiju beatmap, but any Standard map will work. Then, get in osu!, go into the level editor and export the beatmap. That will be our exploit.
+
+For the `.osr` file, since the page does check for a replay that matches the beatmap, just watch and export Auto's replay (on Standard mode) on any difficulty of the same beatmap after the background replacement.
+
+We have the resources to one-shot this challenge.
+
+Go back to the page, upload the files as prompted, it will spit out a picture of our replay on the beatmap we supplied it. Download this image as is.
+
+You can also programmatically do this, since the page's source code does have an API for us to do so as well. Just `POST` to `/api/submit` under a `multipart/form-data` body with two file fields, `osz` and `osr`. Here's a sample `curl` command:
+
+```bash
+curl -X POST https://your.selfhosted.api/api/submit \
+  -F "osz=@exploit.osz" \
+  -F "osr=@auto.osr" \
+  -o result.png
+```
+
+I opened this image in a random text editor. It shouldn't matter what we use to read the image content whether a hex editor or a text editor, but what we should see is a `Raw profile type` `tEXt` field followed by a string of characters:
+
+![The image data in a text editor](./assets/web/scorepost-gen/3.png "The image data in a text editor")
+
+The long string there is our encrypted flag. Put that in a decoder and the given challenge is solved.
 
