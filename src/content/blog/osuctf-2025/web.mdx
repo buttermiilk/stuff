@@ -144,7 +144,7 @@ Let's go back and assess a little bit on what might have happened, there might b
 
 So let's make something that filters out both of those possible conditions, let's test in `DevTools`.
 
-First, the circles' hit time, this is probably controlled by something of the `animation` property in `style`. Try log what that is for every circle:
+First, the circles' hit time, this is controlled by the timestamp string of the `animation` property in `style`. Try log what that is for every circle:
 
 ```js
 document.querySelectorAll("#n").forEach(thing => {
@@ -193,7 +193,7 @@ Now about several circles placed outside the playfield. How big is the playfield
 ...
 ```
 
-And what controls each circle's position? That's probably `left` in `style` for most cases, in that case it can't cross `640px` and can't be lower than `0px`. Check in for that, same method:
+And what controls each circle's position? That's `left` in `style` for most cases, in that case it can't cross `640px` and can't be lower than `0px`. Check in for that, same method:
 ```js
 document.querySelectorAll("#n").forEach(thing => {
   const position = parseFloat(thing.querySelector("div").style.left);
@@ -213,7 +213,7 @@ false
 
 Now, you can obviously read the HTML file to know these things, that works as well. After all, that 20,000 lines HTML file is still formattable and the blocks are still in order.
 
-Anyway, after knowing both of those thing, we create a `boolean`, that boolean has to pass both conditions before being passed to our cheat:
+Anyway. Now we create a `boolean`, that boolean has to pass both conditions before being passed to our cheat:
 ```js
 document.querySelectorAll("#n").forEach(thing => {
   let shouldBeHit = true;
@@ -343,3 +343,56 @@ I opened this image in a random text editor. It shouldn't matter what we use to 
 
 The long string there is our encrypted flag. Put that in a decoder and the given challenge is solved.
 
+## web/blue-zenith
+<Chall
+  title="Blue Zenith"
+  authors={["osu!gang"]}
+  category="web"
+  solvedInTime="no"
+  flag="osu{wh3n_u_d0nt_s33_1t}"
+  instancer="no instancer"
+>
+  WHEN YOU SEE IT!!! (or don't).
+</Chall>
+
+One thing worth pointing out of this challenge is it's rated `1/5` by the challenge authors, but it has less solves than some `2/5`s. I didn't get to this so I don't know what happened, but for sure people might have missed a solve in plain sight.
+
+We don't have the source code this time around, and I was late to cover this challenge: the challenge page is now taken down. But, I think a nice write-up of this challenge is here, https://mariochao.github.io/capture-the-flags/write-ups/osu-gaming-2025/blue-zenith, where it is stated the challenge is a simple blind SQL injection and they used an error-based injection attack to solve it.
+
+There is a proposed solution that uses time-based injection to brute-force every character of the flag. I personally think the error-based attack is cooler.
+
+## web/human-benchmark
+<Chall
+  title="Human Benchmark"
+  authors={["strellic"]}
+  category="web"
+  solvedInTime="yes"
+  flag="I forgot what it was"
+  instancer="15 minutes"
+>
+  can you get to the top of the leaderboard?
+</Chall>
+
+I think this is the most difficult web challenge time-wise. We don't have the source code so we can't host this locally (it was reasonable, there's a part of this challenge that might be impossible otherwise locally), and we have to deal with the 15-minute timer of the instancer.
+
+The way I solved this challenge is clunky, weird and... frankly time-wasting, since I was a `DevTools` fan. And furthermore, this challenge has **4 different parts**. Brace yourself for a long read.
+
+> [work-in-progress since I need to rework my code `qwq`]
+
+## web/chart-viewer & web/beatmap-list
+<Chall
+  title="Chart Viewer & Beatmap List"
+  authors={["chara & strellic"]}
+  category="web"
+  solvedInTime="no"
+>
+  `chart-viewer`: I love looking at those chart background...
+
+  `beatmap-list`: we heard the admin has a secret osu! beatmap... can you find it?
+</Chall>
+
+These are the two most difficult `web` challenges. A very active CTF team, who also won this year's contest, wrote a very, very amazing and detailed solve for both of these, totalling up to a half-an-hour read.
+
+The selling point for me to convince you to ***please give this a read***: You might have never heard of the phrase "escalating RCE into XSS". Now you will.
+
+Learn from the best! Here goes: https://spl.team/blog/osu_ctf_writeups/.
