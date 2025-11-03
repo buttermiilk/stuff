@@ -110,6 +110,148 @@ This reads the flag and serves it as is. Upon uploading that, what we see is thi
 
 The challenge is solved.
 
+## web/osu-css
+<Chall
+  title="osu! CSS"
+  authors={["rebane2001"]}
+  category="web"
+  solvedInTime="no"
+  files={["web_osu-css.tar.gz"]}
+  flag="osu{1m_n0t_4fr4id_0f_the_b1g_bl4ck_4nym0re3}"
+  instancer="no instancer"
+>
+  We were fed up with cheaters, so we decided to rewrite osu! in a programming language that has no cheats.
+</Chall>
+
+Dude. The challenge maker actually recreated osu! in the one and only.
+
+So, opening the file in a supported browser (here, the challenge stated Chrome and Firefox), we see some very standard gameplay on a very difficult classic map, *The Big Black*. Personally a fan, but I'm a taiko player, I can't play this.
+
+So let's cheat just like we did with `kaijuu/ss-me` and `rev/tosu-1`. Initially I thought this would be easy, just find every circle, select and "open" it, surely that'll do. `DevTools` once again, put this in the console:
+```js
+document.querySelectorAll("#n").forEach(thing => thing.open = true);
+```
+
+Oh you thought.
+![The anti-cheat](./assets/web/osu-css/1.png "How did they put anticheat in here.")
+
+Now, I had no idea what was this about, I was as baffled as you are right now. Local anti-cheat in *HTML*.
+
+Let's go back and assess a little bit on what might have happened, there might be a few things this is doing:
+- Something that checks when the circle is hit? But when initially testing manually, we get scores even if we technically didn't hit the circles in the right order, unlike osu! with its notelocking mechanism. So this couldn't be.
+- The challenge maker placed several circles before the song starts or past the end of the song: because we technically can't hit them legitimately, hitting them gets flagged as a cheat. Might as well be!
+- The challenge maker trolled us by outright placing some circles outside of the playfield and can't be legitimately hit, same effect.
+
+So let's make something that filters out both of those possible conditions, let's test in `DevTools`.
+
+First, the circles' hit time, this is probably controlled by something of the `animation` property in `style`. Try log what that is for every circle:
+
+```js
+document.querySelectorAll("#n").forEach(thing => {
+  const animString = thing.querySelector("div").style.animation;
+  console.log(animString);
+});
+```
+
+We get a bunch of lines like this:
+
+```txt
+2s steps(2, jump-none) 10.466s 1 normal none running slideupleft
+2s steps(2, jump-none) 582.549s 1 normal none running slideupleft
+2s steps(2, jump-none) 10.549s 1 normal none running slideupleft
+2s steps(2, jump-none) 10.632s 1 normal none running slideupleft
+2s steps(2, jump-none) 301.632s 1 normal none running slideupleft
+...
+```
+
+This is quite consistent. There are several circles placed outside of the play time, which is `144` seconds, so our theory about some circles placed outside of the play time is correct. To get just the time, just split each string by spaces and get the 4th entry in the returned array, parse it:
+```js
+document.querySelectorAll("#n").forEach(thing => {
+  const objHitTime = parseFloat(thing.querySelector("div").style.animation.split(" ")[3]);
+  console.log(objHitTime);
+});
+```
+
+Here's what we get:
+```txt
+10.466
+582.549
+10.549
+10.632
+301.632
+...
+```
+
+Now about several circles placed outside the playfield. How big is the playfield?
+```html title="osu!css.html" startLineNumber=110 {"That's what we need":3-4}
+<h1 style="color:#DE5B95">osu!css</h1>
+  <div
+
+    style="width: 640px; height: 480px; 
+          overflow: hidden; background: #000;
+          line-height: initial; border-radius: 8px;">
+...
+```
+
+And what controls each circle's position? That's probably `left` in `style` for most cases, in that case it can't cross `640px` and can't be lower than `0px`. Check in for that, same method:
+```js
+document.querySelectorAll("#n").forEach(thing => {
+  const position = parseFloat(thing.querySelector("div").style.left);
+  console.log(position < 0 || position > 640);
+});
+```
+
+And indeed some circles are out of the playfield:
+```txt
+false
+true
+false
+true
+false
+...
+```
+
+Now, you can obviously read the HTML file to know these things, that works as well. After all, that 20,000 lines HTML file is still formattable and the blocks are still in order.
+
+Anyway, after knowing both of those thing, we create a `boolean`, that boolean has to pass both conditions before being passed to our cheat:
+```js
+document.querySelectorAll("#n").forEach(thing => {
+  let shouldBeHit = true;
+
+  // check for the circle's hit time, is it outside of the song's length?
+  const hitTime = parseFloat(thing.querySelector("div").style.animation.split(" ")[3]);
+  if (hitTime > 144) shouldBeHit = false;
+
+  // check for the position of the circle, is it outside of the playfield?
+  const position = parseFloat(thing.querySelector("div").style.left);
+  if (position < 0 || position > 640) shouldBeHit = false;
+
+  thing.open = shouldBeHit;
+});
+```
+
+Alright that works. But now we have another problem: the flag is cut off.
+![The flag is cut off](./assets/web/osu-css/2.png "The flag is cut off!!!")
+
+Coming back to the file, we see everything drawn outside of the playfield is by default hidden because the `overflow` property of the playfield's `div` is `hidden`:
+```html title="osu!css.html" startLineNumber=110 {"Man.":4-5}
+<h1 style="color:#DE5B95">osu!css</h1>
+  <div
+    style="width: 640px; height: 480px; 
+
+          overflow: hidden; background: #000;
+          line-height: initial; border-radius: 8px;">
+...
+```
+
+We can just make it visible. Add this to our cheat:
+```js
+document.querySelector("body>div").style.overflow = "visible";
+```
+
+There's the full flag. This challenge is solved.
+![The full flag](./assets/web/osu-css/3.png "The full flag")
+
 ## web/scorepost-generator
 <Chall
   title="Scorepost Generator"
