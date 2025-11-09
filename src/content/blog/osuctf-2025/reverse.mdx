@@ -2,22 +2,26 @@
 title: 'Reverse'
 description: "I participated in a CTF for the first time. It was fun."
 date: 2025-05-30
+order: 4
 tags: ['ctf', 'writeup', 'rev']
 image: './banner.png'
 authors: ['rin']
 ---
 
-import Chall from "@/components/posts/Chall.astro"
+import Chall from "@/components/externals/Chall.astro"
 
-# Preliminary
+<div class="invisible h-0!">
+## Reverse
+</div>
+## Preliminary
 I'm an absolute beginner at reverse engineering CTFs, either because I don't have the motivation to chew through the extensive world of decompilers and Assembly and dynamic analysis and whatnot or because I'm really lazy to do a ton of code analysis.
 
 `es3n1n` arguably wrote the *most* beautiful challenges of the entire contest this time around. Aside from other really, really good `web` challenges, this category actually has the reverse spirit all around.
 
 Though, unfortunately I could only solve one myself. One has a bug (is that even a bug?), the other is probably one of the hardest technical reverse challenges for a two-day long contest with only **8 solves** after the contest ends.
 
-# The Challenges
-## rev/bleh
+## The Challenges
+### rev/bleh
 
 <Chall
   title="bleh."
@@ -287,7 +291,7 @@ Do the same thing for those files (and probably don't do this manually, lol), co
 
 There's the flag. This challenge is solved.
 
-## rev/tosu-1
+### rev/tosu-1
 
 <Chall
   title="tosu #1"
@@ -346,14 +350,15 @@ Post-contest, many people in different teams confessed they initially tried to m
 
 One experience I got from this was to stop thinking of annihilating the impossible. Thanks, `es3n1n`.
 
-## rev/tosu-2
+### rev/tosu-2
 
 <Chall
   title="tosu #2"
   authors={["es3n1n"]}
-  category="rev"
+  category={["rev", "crypto"]}
   solvedInTime="no"
   files={["rev_tosu-2.tar.gz"]}
+  flag="osu{e5ed275c44694a8f9688065ff540e1057dfbc948}"
 >
   (˶˃ ᵕ ˂˶) .ᐟ.ᐟ
 </Chall>
@@ -364,4 +369,6 @@ But one thing `es3n1n` added when I came back to check the `#reverse` channel:
 
 ![es3n1n's tosu series comment](./assets/rev-tosu2.png "es3n1n's tosu series comment")
 
-Yeah... no. Reverse engineering dalaos, please cover this one. I'll link to a write-up I think is good whenever there's one.
+Yeah... no. However, a CTF team, who finished this contest at second place, has a quite detailed and nice write-up of how they solved this challenge. Give that a read, learn from the best!
+
+Here goes: https://slight-smile.com/writeups/osu-ctf-25/#rev--tosu-2

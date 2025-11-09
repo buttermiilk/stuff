@@ -2,14 +2,18 @@
 title: 'Web'
 description: "I participated in a CTF for the first time. It was fun."
 date: 2025-05-30
+order: 5
 tags: ['ctf', 'writeup', 'web']
 image: './banner.png'
 authors: ['rin']
 ---
 
-import Chall from "@/components/posts/Chall.astro"
+import Chall from "@/components/externals/Chall.astro"
 
-# Preliminary
+<div class="invisible h-0!">
+## Web
+</div>
+## Preliminary
 Now, this is the *best* category of this contest. Might be because there are multiple `web` challenge authors, might be because it's accessible to many people, might be because it's the nicest category to solve out there without feeling we lack knowledge since web knowledges are easily accessible, might be all of these.
 
 Initially I had a friend who wanted to join me on `web`, but they forgot to ask and I also didn't want to ask, so I ended up doing the `crypto` ones on Saturday then dip. Revisiting, yeah, I should turn my focus to this next year.
@@ -20,8 +24,8 @@ The `web` category has one more very interesting constraint that I'll put in the
 
 Good luck with that instancer if you feel hosting the thing yourself is a hassle.
 
-# The Challenges
-## web/admin-panel
+## The Challenges
+### web/admin-panel
 
 <Chall
   title="Admin Panel"
@@ -47,28 +51,33 @@ $admin_password = bin2hex(random_bytes(16));
 ```
 
 The password is literally random every login. Alright, so that's not an option, now how about the way the password is checked then? That's the second step, surely something hits.
-```php title="login.php" startLineNumber=9
-if ($username == "peppy" && strcmp($admin_password, $password) == 0) {
-  $_SESSION["logged_in"] = true;
-  header("Location: admin.php");
-  exit();
-}
+```php title="login.php" startLineNumber=9 {"The password checker": 3-4}
+if (
+  $username == "peppy" && 
+
+  strcmp($admin_password, $password) == 0
+) 
+  {
+    $_SESSION["logged_in"] = true;
+    header("Location: admin.php");
+    exit();
+  }
 ```
 
-A tiny amount of Googling later and you'll find [this vulnerability](https://www.php.net/manual/en/function.strcmp.php#121789) with using `strcmp(){:php}` like this in `PHP`, which allows you to type juggle and get in without ever touching entropy itself. To explain what would happen if we throw an array in `strcmp(){:php}` to compare against a string, we get `NULL`, and `NULL == 0` is `true`.
+A tiny amount of Googling later and we'll find [this vulnerability](https://www.php.net/manual/en/function.strcmp.php#121789) with using `strcmp(){:php}` like this in `PHP`, which allows us to type juggle and get in without ever touching entropy itself. To explain what would happen if we throw an array in `strcmp(){:php}` to compare against a string, we get `NULL`, and `NULL == 0` is `true`.
 
 Simple `DevTools` does the job well.
 
 ![DevTools](./assets/web/admin-panel/2.png)
 
-I wonder why does the world keep using `PHP` if things like this has existed for 8 years and never got patched?
+I wonder why does the world keep using `PHP` if things like this have existed for 8 years and never got patched?
 
 Anyway, now we can navigate to the admin panel. We're presented with this window:
 
 ![Admin panel](./assets/web/admin-panel/3.png)
 
 So looks like the second layer of this challenge is some sort of RCE. Check the source code again to see the upload logic, we can see a fatal flaw:
-```php title="admin.php" startLineNumber=8
+```php title="admin.php" startLineNumber=8 {"Very interesting...": 6-12}
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
   if (isset($_FILES["file"])) {
     $file = $_FILES["file"];
@@ -110,7 +119,7 @@ This reads the flag and serves it as is. Upon uploading that, what we see is thi
 
 The challenge is solved.
 
-## web/osu-css
+### web/osu-css
 <Chall
   title="osu! CSS"
   authors={["rebane2001"]}
@@ -123,7 +132,7 @@ The challenge is solved.
   We were fed up with cheaters, so we decided to rewrite osu! in a programming language that has no cheats.
 </Chall>
 
-Dude. The challenge maker actually recreated osu! in the one and only.
+Wowzers. The challenge author actually recreated osu! in the one and only.
 
 So, opening the file in a supported browser (here, the challenge stated Chrome and Firefox), we see some very standard gameplay on a very difficult classic map, *The Big Black*. Personally a fan, but I'm a taiko player, I can't play this.
 
@@ -252,7 +261,7 @@ document.querySelector("body>div").style.overflow = "visible";
 There's the full flag. This challenge is solved.
 ![The full flag](./assets/web/osu-css/3.png "The full flag")
 
-## web/scorepost-generator
+### web/scorepost-generator
 <Chall
   title="Scorepost Generator"
   authors={["strellic"]}
@@ -283,8 +292,9 @@ I could only guess pointing that out is the “beginner-friendly” part of the 
 
 Going back to check, you could find the code segment that used `imagemagick` to read the beatmap's background image, right inside `scorepost.js`:
 
-```js title="scorepost.js" startLineNumber=72
+```js title="scorepost.js" startLineNumber=72 {"ImageMagick is gm": 2-3}
 const size = await new Promise((resolve, reject) => {
+
   gm(bgImagePath).size((err, size) => {
     if (err) reject(err);
     else resolve(size);
@@ -343,7 +353,7 @@ I opened this image in a random text editor. It shouldn't matter what we use to 
 
 The long string there is our encrypted flag. Put that in a decoder and the given challenge is solved.
 
-## web/blue-zenith
+### web/blue-zenith
 <Chall
   title="Blue Zenith"
   authors={["osu!gang"]}
@@ -361,7 +371,7 @@ We don't have the source code this time around, and I was late to cover this cha
 
 There is a proposed solution that uses time-based injection to brute-force every character of the flag. I personally think the error-based attack is cooler.
 
-## web/human-benchmark
+### web/human-benchmark
 <Chall
   title="Human Benchmark"
   authors={["strellic"]}
@@ -379,7 +389,7 @@ The way I solved this challenge is clunky, weird and... frankly time-wasting, si
 
 > [work-in-progress since I need to rework my code `qwq`]
 
-## web/chart-viewer & web/beatmap-list
+### web/chart-viewer & web/beatmap-list
 <Chall
   title="Chart Viewer & Beatmap List"
   authors={["chara & strellic"]}

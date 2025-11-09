@@ -101,7 +101,7 @@ export default defineConfig({
       [
         rehypePrettyCode,
         {
-          theme: 'vitesse-dark',
+          theme: 'github-dark',
         },
       ],
     ],

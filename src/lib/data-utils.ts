@@ -46,28 +46,23 @@ export async function getAdjacentPosts(currentId: string): Promise<{
   parent: CollectionEntry<'blog'> | null
 }> {
   const allPosts = await getAllPosts()
+  const compareByOrder = (
+    a: CollectionEntry<'blog'>,
+    b: CollectionEntry<'blog'>,
+  ) => {
+    const orderA = a.data.order ?? Number.POSITIVE_INFINITY
+    const orderB = b.data.order ?? Number.POSITIVE_INFINITY
+    if (orderA !== orderB) return orderA - orderB
+    return a.data.date.valueOf() - b.data.date.valueOf()
+  }
 
   if (isSubpost(currentId)) {
     const parentId = getParentId(currentId)
-    const allPosts = await getAllPosts()
     const parent = allPosts.find((post) => post.id === parentId) || null
 
-    const posts = await getCollection('blog')
-    const subposts = posts
-      .filter(
-        (post) =>
-          isSubpost(post.id) &&
-          getParentId(post.id) === parentId &&
-          !post.data.draft,
-      )
-      .sort((a, b) => {
-        const dateDiff = a.data.date.valueOf() - b.data.date.valueOf()
-        if (dateDiff !== 0) return dateDiff
-
-        const orderA = a.data.order ?? 0
-        const orderB = b.data.order ?? 0
-        return orderA - orderB
-      })
+    const subposts = (await getSubpostsForParent(parentId))
+      .slice()
+      .sort(compareByOrder)
 
     const currentIndex = subposts.findIndex((post) => post.id === currentId)
     if (currentIndex === -1) {
@@ -82,7 +77,7 @@ export async function getAdjacentPosts(currentId: string): Promise<{
     }
   }
 
-  const parentPosts = allPosts.filter((post) => !isSubpost(post.id))
+  const parentPosts = allPosts.slice().sort(compareByOrder)
   const currentIndex = parentPosts.findIndex((post) => post.id === currentId)
 
   if (currentIndex === -1) {
@@ -90,11 +85,11 @@ export async function getAdjacentPosts(currentId: string): Promise<{
   }
 
   return {
-    newer: currentIndex > 0 ? parentPosts[currentIndex - 1] : null,
-    older:
+    newer:
       currentIndex < parentPosts.length - 1
         ? parentPosts[currentIndex + 1]
         : null,
+    older: currentIndex > 0 ? parentPosts[currentIndex - 1] : null,
     parent: null,
   }
 }

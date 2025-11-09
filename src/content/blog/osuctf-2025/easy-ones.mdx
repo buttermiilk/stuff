@@ -2,18 +2,22 @@
 title: 'The Easy Ones'
 description: "I participated in a CTF for the first time. It was fun."
 date: 2025-05-30
+order: 1
 tags: ['ctf', 'writeup', 'osu!']
 image: './banner.png'
 authors: ['rin']
 ---
 
-import Chall from "@/components/posts/Chall.astro"
+import Chall from "@/components/externals/Chall.astro"
 
-# Preliminary
+<div class="invisible h-0!">
+## The Easy Ones
+</div>
+## Preliminary
 There are a couple of *tasks* that give you free points. They, technically, aren't *challenges*, and I cover them here. The solution for these are one-offs.
 
-# The Challenges
-## osu/welcome
+## The Challenges
+### osu/welcome
 
 <Chall
   title="Welcome"
@@ -31,7 +35,7 @@ This one only requires us to have a Discord account and join [the contest's Disc
 
 Of course, there is point scaling: a point system that scales with how many people have solved the challenge; we'll have to be quick with this one. I woke up 4 hours after the announcement of the contest. Wonderful, yes?
 
-## osu/lobby
+### osu/lobby
 
 <Chall
   title="Lobby"
@@ -49,7 +53,7 @@ I believe the lobby has closed, but the way we get the flag is just to execute `
 
 Initially I tried to manually type in the flag, but the way osu! IRC renders `0` and `o` kind of sucked for `1337code`, lol. Just get to the website, open chat and copy from there to avoid any misspells.
 
-## osu/survey
+### osu/survey
 
 <Chall
   title="Survey"

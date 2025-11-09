@@ -2,20 +2,24 @@
 title: 'Cryp-otatoes'
 description: "I participated in a CTF for the first time. It was fun."
 date: 2025-05-30
+order: 2
 tags: ['ctf', 'writeup', 'crypto']
 image: './banner.png'
 authors: ['rin']
 ---
 
-import Chall from "@/components/posts/Chall.astro"
+import Chall from "@/components/externals/Chall.astro"
 
-# Preliminary
+<div class="invisible h-0!">
+## Cryp-otatoes
+</div>
+## Preliminary
 As far as I'm concerned `crypto` involves a bunch of maths. After painstakingly but successfully solving 3 out of the 8 challenges in this category in time (which is low as hell), I can imagine the amount of maths one has to know in order to solve many of these.
 
 I'll attempt to go through all 8 challenges, in detail.
 
-# The Challenges
-## crypto/rot727
+## The Challenges
+### crypto/rot727
 
 <Chall
   title="ROT727"
@@ -31,7 +35,7 @@ I'll attempt to go through all 8 challenges, in detail.
 
 That name reminds us of `ROT13`, a rotation cipher. We know every flag starts with `osu{`, so to make it quick, just put the string in [CyberChef](https://gchq.github.io/CyberChef). Set amount to `14` and the challenge is solved.
 
-## crypto/beyond-wood
+### crypto/beyond-wood
 
 <Chall
   title="Beyond Wood"
@@ -141,7 +145,7 @@ dec_img.save("flag_decrypted.png")
 
 We get a pretty funny image with the flag handwritten in it.
 
-## crypto/xnor-xnor-xnor
+### crypto/xnor-xnor-xnor
 <Chall
   title="XNOR XNOR XNOR"
   authors={["wwm"]}
@@ -230,7 +234,7 @@ flag = bytes(xnor_byte(e,k) for e,k in zip(enc, ks))
 print(flag.decode())
 ```
 
-## crypto/pls-nominate
+### crypto/pls-nominate
 <Chall
   title='"pls" Nominate'
   authors={["wwm"]}
@@ -366,7 +370,7 @@ if __name__ == "__main__":
 
 That map was qualified a couple of hours after this challenge airs. `:steamhappy:` indeed.
 
-## crypto/linear-feedback
+### crypto/linear-feedback
 <Chall
   title="Linear Feedback"
   authors={["wwm"]}
@@ -510,7 +514,7 @@ Also, I've read one other writeup of this same problem that uses *Gaussian elimi
 
 Anyway, `:steamhappy:`, I like that song as well, being a taiko player.
 
-## crypto/ssss
+### crypto/ssss
 <Chall
   title="QuadS"
   authors={["wwm"]}
@@ -754,7 +758,7 @@ if __name__ == "__main__":
 
 Yeah this is hard. Not very `:steamhappy:` this time, but we got 100% accuracy, fast.
 
-## crypto/please-nominate
+### crypto/please-nominate
 <Chall
   title="Please Nominate."
   authors={["wwm"]}
@@ -870,7 +874,7 @@ for i in range(1, 101):
     break
 ```
 
-## crypto/ssssp
+### crypto/ssssp
 <Chall
   title="QuadS+"
   authors={["wwm"]}
@@ -903,9 +907,8 @@ $$
 
 Here comes the tricks.
 
-#### Isolating the odd coeffs. mod p with symmetry
-
-Query in pairs $(x,\ p - x)$. Modulo $p$, we have $p - x = -x$, then:
+#### Isolating
+We're going to isolate the odd coeffs. mod p with symmetry. Query in pairs $(x,\ p - x)$. Modulo $p$, we have $p - x = -x$, then:
 $$
 f(x) - f(-x) = \sum_{i = 0}^{14}c_i\big(x^i - (-x)^i\big)
 = \sum_{i\ odd}^{}c_i\big(x^i - (-x)^i\big) \\
@@ -944,7 +947,9 @@ $$
 c_{2j + 1} = r_{2j + 1}\quad (\bmod\ p), \qquad j = 0,...,6.
 $$
 
-#### Lift each odd coeff. $c_{2j + 1} \in \{r_{2j + 1},\ r_{2j + 1} + p\}$
+#### Lift each odd coeff.
+
+We're trying to lift each coeff. $c_{2j + 1} \in \{r_{2j + 1},\ r_{2j + 1} + p\}$ here.
 
 Each integer representative is either the residue $r$ or $r + p$, since the real coeffs. live modulo $pp$ but we only know them modulo $p$, and $pp \approx 2^{256}$ is close to $2p$. Also, it can't be $r + 2p$ since $2p > 2^{256}$, which exceeds the range $0 \le c_i < pp$. So, for each odd index we introduce something $m_j \in \{0,1\}$:
 $$
@@ -953,9 +958,9 @@ $$
 
 That gives us a 7-term subsequence $Y_0, Y_1, ..., Y_6$ of the true integer odd coeffs.
 
-#### The odd subsequence is an LCG!
+#### The odd subsequence...
 
-Alright, this is going to be wild. From the original LCG modulo $pp$,
+This is going to be wild. From the original LCG modulo $pp$,
 $$
 c_{i + 1} = ac_i + b\quad (\bmod\ pp).
 $$
@@ -972,7 +977,7 @@ $$
 
 Now we can run standard LCG modulus-recovery on $Y$.
 
-#### Recover the $pp$
+#### Recover pp
 
 Let's look at an LCG $X_{n + 1} = AX_n + C\ (\bmod\ M)$. We can see the quantity
 $$
